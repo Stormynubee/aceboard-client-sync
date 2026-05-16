@@ -5,29 +5,33 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
-const connectionString = process.env.DATABASE_URL || "postgresql://dummy:dummy@localhost:5432/dummy";
+const connectionString = process.env.DATABASE_URL;
 
 const createPrismaClient = () => {
-  if (typeof window !== "undefined" || process.env.NEXT_RUNTIME === "edge") {
-    return null as unknown as PrismaClient;
+  // Standard PrismaClient for non-postgres or development without special adapters
+  if (!connectionString || connectionString.includes("localhost") || process.env.NODE_ENV === "development") {
+    return new PrismaClient();
   }
 
-  try {
-    const { Pool } = require("pg");
-    const { PrismaPg } = require("@prisma/adapter-pg");
-    
-    // We use a dummy pool if we don't have a real connection string to satisfy Prisma 7 requirements
-    const pool = new Pool({ connectionString });
-    const adapter = new PrismaPg(pool);
-    return new PrismaClient({ adapter });
-  } catch (error) {
-    console.error("Failed to initialize Prisma with PG adapter:", error);
-    // Fallback to a plain client which might still fail in Prisma 7, 
-    // but at least we tried to use the adapter.
-    return new PrismaClient() as any; 
+  // Production with PostgreSQL adapter (Node.js only)
+  if (typeof window === "undefined" && process.env.NEXT_RUNTIME !== "edge") {
+    try {
+      // Dynamic import to keep Edge runtime happy
+      const { Pool } = require("pg");
+      const { PrismaPg } = require("@prisma/adapter-pg");
+      
+      const pool = new Pool({ connectionString });
+      const adapter = new PrismaPg(pool);
+      return new PrismaClient({ adapter });
+    } catch (error) {
+      console.error("Prisma adapter load failed, falling back to default:", error);
+      return new PrismaClient();
+    }
   }
+
+  return new PrismaClient();
 };
 
 export const db = globalThis.prisma || createPrismaClient();
 
-if (process.env.NODE_ENV !== "production" && db) globalThis.prisma = db;
+if (process.env.NODE_ENV !== "production") globalThis.prisma = db;
