@@ -1,9 +1,11 @@
 "use server";
-
 import { auth } from "@/auth";
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { s3Client, BUCKET_NAME } from "@/lib/s3";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const CreateProjectSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -11,7 +13,28 @@ const CreateProjectSchema = z.object({
   videoUrl: z.string().url("Valid video URL is required"),
 });
 
+export async function getPresignedUrl(fileName: string, contentType: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const key = `videos/${session.user.id}/${Date.now()}-${fileName}`;
+
+  const command = new PutObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+
+  // Public URL for viewing (assuming the bucket is public or has a CDN)
+  // For R2, this is usually https://<account_id>.r2.cloudflarestorage.com/<bucket>/<key>
+  // But often users use a custom domain. We'll return the Key and the upload URL.
+  return { uploadUrl: url, key };
+}
+
 export async function createProject(formData: z.infer<typeof CreateProjectSchema>) {
+...
   const session = await auth();
 
   if (!session?.user?.id) {

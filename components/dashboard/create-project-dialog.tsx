@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,14 +23,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Video } from "lucide-react";
-import { createProject } from "@/lib/actions";
+import { Plus, Video, Upload, CheckCircle2, Loader2 } from "lucide-react";
+import { createProject, getPresignedUrl } from "@/lib/actions";
 import { useRouter } from "next/navigation";
 
 const formSchema = z.object({
   title: z.string().min(1, "Title is required"),
   description: z.string().optional(),
-  videoUrl: z.string().url("Please enter a valid URL (e.g., https://...)"),
+  videoUrl: z.string().url("Please upload a video or enter a valid URL"),
 });
 
 interface CreateProjectDialogProps {
@@ -39,6 +39,9 @@ interface CreateProjectDialogProps {
 
 export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
   const [open, setOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -50,11 +53,69 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
     },
   });
 
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Basic validation for video files
+    if (!file.type.startsWith("video/")) {
+      alert("Please select a valid video file.");
+      return;
+    }
+
+    try {
+      setIsUploading(true);
+      setUploadProgress(10);
+
+      // 1. Get pre-signed URL from server
+      const { uploadUrl, key } = await getPresignedUrl(file.name, file.type);
+      setUploadProgress(30);
+
+      // 2. Upload directly to S3/R2
+      const xhr = new XMLHttpRequest();
+      xhr.open("PUT", uploadUrl, true);
+      xhr.setRequestHeader("Content-Type", file.type);
+
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 60) + 30;
+          setUploadProgress(percentComplete);
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status === 200) {
+          // Construct the final public URL
+          const publicBaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
+          const finalUrl = `${publicBaseUrl}/${key}`;
+          form.setValue("videoUrl", finalUrl);
+          setUploadProgress(100);
+          setIsUploading(false);
+        } else {
+          throw new Error("Upload failed");
+        }
+      };
+
+      xhr.onerror = () => {
+        throw new Error("Upload error");
+      };
+
+      xhr.send(file);
+
+    } catch (error) {
+      console.error("Upload failed:", error);
+      setIsUploading(false);
+      setUploadProgress(0);
+      alert("Video upload failed. Please try again.");
+    }
+  };
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       await createProject(values);
       setOpen(false);
       form.reset();
+      setUploadProgress(0);
       router.refresh();
     } catch (error) {
       console.error("Failed to create project:", error);
@@ -74,13 +135,13 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>
           <DialogDescription>
-            Add your video details to start a review session with your client.
+            Upload a video or provide a link to start the review process.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              control= {form.control}
+              control={form.control}
               name="title"
               render={({ field }) => (
                 <FormItem>
@@ -92,6 +153,87 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
                 </FormItem>
               )}
             />
+            
+            <div className="space-y-2">
+              <FormLabel>Video Source</FormLabel>
+              <div className="grid grid-cols-1 gap-4">
+                {/* Upload Button */}
+                <div 
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`
+                    border-2 border-dashed rounded-lg p-6 flex flex-col items-center justify-center cursor-pointer transition-colors
+                    ${isUploading ? "bg-muted cursor-not-allowed" : "hover:bg-muted/50"}
+                    ${form.getValues("videoUrl") && !isUploading ? "border-primary/50 bg-primary/5" : "border-muted-foreground/20"}
+                  `}
+                >
+                  <input 
+                    type="file" 
+                    ref={fileInputRef} 
+                    className="hidden" 
+                    accept="video/*"
+                    onChange={handleFileUpload}
+                    disabled={isUploading}
+                  />
+                  
+                  {isUploading ? (
+                    <div className="flex flex-col items-center gap-2 w-full">
+                      <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                      <p className="text-sm font-medium">Uploading video... {uploadProgress}%</p>
+                      <div className="w-full bg-muted-foreground/20 h-1.5 rounded-full overflow-hidden mt-2">
+                        <div 
+                          className="bg-primary h-full transition-all duration-300" 
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  ) : form.getValues("videoUrl") ? (
+                    <div className="flex flex-col items-center gap-1 text-primary">
+                      <CheckCircle2 className="h-8 w-8" />
+                      <p className="text-sm font-bold">Video Ready</p>
+                      <p className="text-[10px] text-muted-foreground truncate max-w-[200px]">
+                        {form.getValues("videoUrl")}
+                      </p>
+                    </div>
+                  ) : (
+                    <>
+                      <Upload className="h-8 w-8 text-muted-foreground mb-2" />
+                      <p className="text-sm font-medium">Click to upload video file</p>
+                      <p className="text-xs text-muted-foreground mt-1">MP4, MOV up to 500MB</p>
+                    </>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">Or paste link</span>
+                  </div>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="videoUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <div className="relative">
+                          <Video className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                          <Input 
+                            placeholder="https://..." 
+                            className="pl-9" 
+                            {...field} 
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="description"
@@ -109,33 +251,12 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
                 </FormItem>
               )}
             />
-            <FormField
-              control={form.control}
-              name="videoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Video URL</FormLabel>
-                  <FormControl>
-                    <div className="flex gap-2">
-                      <div className="relative flex-1">
-                        <Video className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input 
-                          placeholder="https://..." 
-                          className="pl-9" 
-                          {...field} 
-                        />
-                      </div>
-                    </div>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+
             <div className="flex justify-end gap-3 pt-4">
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
+              <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
                 {form.formState.isSubmitting ? "Creating..." : "Create Project"}
               </Button>
             </div>
