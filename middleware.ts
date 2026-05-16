@@ -1,9 +1,9 @@
 import NextAuth from "next-auth";
 import authConfig from "./auth.config";
 
-const { auth } = NextAuth(authConfig);
+export const { auth: middlewareAuth } = NextAuth(authConfig);
 
-export default auth((req) => {
+export default middlewareAuth((req) => {
   const isLoggedIn = !!req.auth;
   const isDashboardRoute = req.nextUrl.pathname.startsWith("/dashboard");
 
