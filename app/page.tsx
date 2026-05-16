@@ -18,8 +18,12 @@ export default function Home() {
             Share timestamped review links with clients. Collect precise feedback directly on the timeline. No more messy email chains.
           </p>
           <div className="mt-10 flex flex-col sm:flex-row gap-4">
-            <Button size="lg" className="px-8 font-semibold">Start Free Trial</Button>
-            <Button size="lg" variant="outline" className="px-8 font-semibold">Watch Demo</Button>
+            <Link href="/signup">
+              <Button size="lg" className="px-8 font-semibold">Start Free Trial</Button>
+            </Link>
+            <Link href="/review/demo">
+              <Button size="lg" variant="outline" className="px-8 font-semibold">Watch Demo</Button>
+            </Link>
           </div>
           <div className="mt-16 w-full max-w-5xl aspect-video bg-muted rounded-xl border shadow-2xl flex items-center justify-center overflow-hidden">
             <div className="flex flex-col items-center gap-4 text-muted-foreground">
@@ -82,7 +86,9 @@ export default function Home() {
               Join hundreds of editors who have cut their review cycles in half.
             </p>
             <div className="mt-10">
-              <Button size="lg" className="px-12 font-bold text-lg">Get Started Now</Button>
+              <Link href="/signup">
+                <Button size="lg" className="px-12 font-bold text-lg">Get Started Now</Button>
+              </Link>
             </div>
           </div>
         </section>

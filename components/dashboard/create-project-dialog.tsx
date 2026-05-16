@@ -68,7 +68,7 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
       setUploadProgress(10);
 
       // 1. Get pre-signed URL from server
-      const { uploadUrl, key } = await getPresignedUrl(file.name, file.type);
+      const { uploadUrl, finalUrl } = await getPresignedUrl(file.name, file.type);
       setUploadProgress(30);
 
       // 2. Upload directly to S3/R2
@@ -85,19 +85,20 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
 
       xhr.onload = () => {
         if (xhr.status === 200) {
-          // Construct the final public URL
-          const publicBaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || "";
-          const finalUrl = `${publicBaseUrl}/${key}`;
           form.setValue("videoUrl", finalUrl);
           setUploadProgress(100);
           setIsUploading(false);
         } else {
-          throw new Error("Upload failed");
+          setIsUploading(false);
+          setUploadProgress(0);
+          alert(`Upload failed with status: ${xhr.status}`);
         }
       };
 
       xhr.onerror = () => {
-        throw new Error("Upload error");
+        setIsUploading(false);
+        setUploadProgress(0);
+        alert("Network error during upload.");
       };
 
       xhr.send(file);

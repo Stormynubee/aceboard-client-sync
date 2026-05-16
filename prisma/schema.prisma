@@ -23,7 +23,7 @@ model User {
   updatedAt     DateTime  @updatedAt
 }
 
-// NextAuth.js Requirements
+// NextAuth.js Requirements (Updated for Auth.js v5/v6)
 model Account {
   id                 String  @id @default(cuid())
   userId             String

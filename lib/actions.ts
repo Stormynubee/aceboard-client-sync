@@ -19,7 +19,8 @@ export async function getPresignedUrl(fileName: string, contentType: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
 
-  const key = `videos/${session.user.id}/${Date.now()}-${fileName}`;
+  const timestamp = Date.now();
+  const key = `videos/${session.user.id}/${timestamp}-${fileName}`;
 
   const command = new PutObjectCommand({
     Bucket: BUCKET_NAME,
@@ -27,12 +28,13 @@ export async function getPresignedUrl(fileName: string, contentType: string) {
     ContentType: contentType,
   });
 
-  const url = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
+  const uploadUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
 
-  // Public URL for viewing (assuming the bucket is public or has a CDN)
-  // For R2, this is usually https://<account_id>.r2.cloudflarestorage.com/<bucket>/<key>
-  // But often users use a custom domain. We'll return the Key and the upload URL.
-  return { uploadUrl: url, key };
+  // Use environment variable for public base URL or fallback to the endpoint
+  const publicBaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL || process.env.R2_ENDPOINT;
+  const finalUrl = `${publicBaseUrl}/${key}`;
+
+  return { uploadUrl, finalUrl, key };
 }
 
 export async function createProject(formData: z.infer<typeof CreateProjectSchema>) {

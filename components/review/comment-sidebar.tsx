@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -29,6 +29,11 @@ export function CommentSidebar({ projectId, initialComments, currentTime, onSeek
   const [newComment, setNewComment] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Sync with server data when it changes (revalidation)
+  useEffect(() => {
+    setComments(initialComments);
+  }, [initialComments]);
+
   const formatTime = (time: number) => {
     const mins = Math.floor(time / 60);
     const secs = Math.floor(time % 60);
@@ -41,11 +46,10 @@ export function CommentSidebar({ projectId, initialComments, currentTime, onSeek
     try {
       setIsSubmitting(true);
       const timestamp = formatTime(currentTime);
-      const author = "Client"; // In a real app, this might come from a prompt or session
+      const author = "Client"; 
 
-      const comment = await addComment(projectId, newComment, timestamp, author);
-      
-      setComments([comment as any, ...comments]);
+      await addComment(projectId, newComment, timestamp, author);
+      // We rely on server revalidation to update the comments list
       setNewComment("");
     } catch (error) {
       console.error("Failed to add comment:", error);

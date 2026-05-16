@@ -13,13 +13,17 @@ interface VideoPlayerProps {
 export function VideoPlayer({ url, onTimeUpdate, seekTo }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setUploadProgress] = useState(0);
+  const [playbackProgress, setPlaybackProgress] = useState(0);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
 
   useEffect(() => {
     if (seekTo !== undefined && videoRef.current) {
       videoRef.current.currentTime = seekTo;
+      // If was paused, keep it paused but show the frame
+      if (!isPlaying) {
+        videoRef.current.pause();
+      }
     }
   }, [seekTo]);
 
@@ -36,7 +40,7 @@ export function VideoPlayer({ url, onTimeUpdate, seekTo }: VideoPlayerProps) {
       const time = videoRef.current.currentTime;
       setCurrentTime(time);
       onTimeUpdate(time);
-      setUploadProgress((time / videoRef.current.duration) * 100);
+      setPlaybackProgress((time / videoRef.current.duration) * 100);
     }
   };
 
@@ -74,11 +78,11 @@ export function VideoPlayer({ url, onTimeUpdate, seekTo }: VideoPlayerProps) {
         >
           <div 
             className="absolute left-0 top-0 h-full bg-primary rounded-full"
-            style={{ width: `${progress}%` }}
+            style={{ width: `${playbackProgress}%` }}
           />
           <div 
             className="absolute h-3 w-3 bg-white rounded-full shadow-lg -top-[3px] opacity-0 group-hover/progress:opacity-100 transition-opacity"
-            style={{ left: `${progress}%`, transform: 'translateX(-50%)' }}
+            style={{ left: `${playbackProgress}%`, transform: 'translateX(-50%)' }}
           />
         </div>
 
