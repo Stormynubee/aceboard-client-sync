@@ -3,13 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Plus, Video } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { db } from "@/lib/db";
+import { CreateProjectDialog } from "@/components/dashboard/create-project-dialog";
+import { ProjectList } from "@/components/dashboard/project-list";
 
 export default async function DashboardPage() {
   const session = await auth();
 
-  if (!session) {
+  if (!session?.user?.id) {
     redirect("/login");
   }
+
+  const projects = await db.project.findMany({
+    where: {
+      userId: session.user.id,
+    },
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
 
   return (
     <div className="min-h-screen bg-muted/20">
@@ -40,24 +52,28 @@ export default async function DashboardPage() {
             <h1 className="text-3xl font-bold">Your Projects</h1>
             <p className="text-muted-foreground">Manage your video reviews and client feedback.</p>
           </div>
-          <Button className="gap-2">
-            <Plus className="w-4 h-4" /> New Project
-          </Button>
+          <CreateProjectDialog />
         </div>
 
-        {/* Empty State */}
-        <div className="bg-background border-2 border-dashed rounded-2xl p-24 flex flex-col items-center justify-center text-center">
-          <div className="bg-primary/10 p-4 rounded-full mb-4">
-            <Video className="w-12 h-12 text-primary" />
+        {projects.length > 0 ? (
+          <ProjectList projects={projects} />
+        ) : (
+          /* Empty State */
+          <div className="bg-background border-2 border-dashed rounded-2xl p-24 flex flex-col items-center justify-center text-center">
+            <div className="bg-primary/10 p-4 rounded-full mb-4">
+              <Video className="w-12 h-12 text-primary" />
+            </div>
+            <h2 className="text-xl font-bold">No projects yet</h2>
+            <p className="text-muted-foreground max-w-sm mt-2">
+              Upload your first video to start collecting synced feedback from your clients.
+            </p>
+            <CreateProjectDialog>
+              <Button className="mt-8 gap-2">
+                <Plus className="w-4 h-4" /> Create your first project
+              </Button>
+            </CreateProjectDialog>
           </div>
-          <h2 className="text-xl font-bold">No projects yet</h2>
-          <p className="text-muted-foreground max-w-sm mt-2">
-            Upload your first video to start collecting synced feedback from your clients.
-          </p>
-          <Button className="mt-8 gap-2">
-            <Plus className="w-4 h-4" /> Create your first project
-          </Button>
-        </div>
+        )}
       </main>
     </div>
   );
