@@ -13,6 +13,8 @@ const CreateProjectSchema = z.object({
   videoUrl: z.string().url("Valid video URL is required"),
 });
 
+const UpdateProjectSchema = CreateProjectSchema.partial();
+
 export async function getPresignedUrl(fileName: string, contentType: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -34,12 +36,8 @@ export async function getPresignedUrl(fileName: string, contentType: string) {
 }
 
 export async function createProject(formData: z.infer<typeof CreateProjectSchema>) {
-...
   const session = await auth();
-
-  if (!session?.user?.id) {
-    throw new Error("Unauthorized");
-  }
+  if (!session?.user?.id) throw new Error("Unauthorized");
 
   const { title, description, videoUrl } = CreateProjectSchema.parse(formData);
 
@@ -54,4 +52,30 @@ export async function createProject(formData: z.infer<typeof CreateProjectSchema
 
   revalidatePath("/dashboard");
   return project;
+}
+
+export async function updateProject(id: string, formData: z.infer<typeof UpdateProjectSchema>) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  const data = UpdateProjectSchema.parse(formData);
+
+  const project = await db.project.update({
+    where: { id, userId: session.user.id },
+    data,
+  });
+
+  revalidatePath("/dashboard");
+  return project;
+}
+
+export async function deleteProject(id: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+
+  await db.project.delete({
+    where: { id, userId: session.user.id },
+  });
+
+  revalidatePath("/dashboard");
 }
