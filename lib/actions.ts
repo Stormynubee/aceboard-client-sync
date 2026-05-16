@@ -93,3 +93,9 @@ export async function addComment(projectId: string, text: string, timestamp: str
   revalidatePath(`/review/${projectId}`);
   return comment;
 }
+
+import { signOut as nextAuthSignOut } from "@/auth";
+
+export async function signOutAction() {
+  await nextAuthSignOut({ redirectTo: "/" });
+}

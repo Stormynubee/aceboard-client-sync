@@ -33,11 +33,13 @@ export function ProjectList({ projects }: ProjectListProps) {
               <span className="text-muted-foreground text-xs uppercase font-bold tracking-widest">Preview</span>
               <div className="absolute top-2 right-2">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="secondary" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
+                  <DropdownMenuTrigger
+                    render={
+                      <Button variant="secondary" size="icon" className="h-8 w-8">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    }
+                  />
                   <DropdownMenuContent align="end">
                     <EditProjectDialog project={project}>
                       <DropdownMenuItem onSelect={(e) => e.preventDefault()}>

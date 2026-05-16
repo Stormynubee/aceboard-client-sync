@@ -34,7 +34,7 @@ const formSchema = z.object({
 });
 
 interface CreateProjectDialogProps {
-  children?: React.ReactNode;
+  children?: React.ReactElement;
 }
 
 export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
@@ -124,13 +124,13 @@ export function CreateProjectDialog({ children }: CreateProjectDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children || (
+      <DialogTrigger 
+        render={children || (
           <Button className="gap-2">
             <Plus className="w-4 h-4" /> New Project
           </Button>
         )}
-      </DialogTrigger>
+      />
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Create New Project</DialogTitle>

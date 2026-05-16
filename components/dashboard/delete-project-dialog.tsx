@@ -18,7 +18,7 @@ import { useState } from "react";
 interface DeleteProjectDialogProps {
   projectId: string;
   projectTitle: string;
-  children: React.ReactNode;
+  children: React.ReactElement;
 }
 
 export function DeleteProjectDialog({ projectId, projectTitle, children }: DeleteProjectDialogProps) {
@@ -39,9 +39,7 @@ export function DeleteProjectDialog({ projectId, projectTitle, children }: Delet
 
   return (
     <AlertDialog>
-      <AlertDialogTrigger asChild>
-        {children}
-      </AlertDialogTrigger>
+      <AlertDialogTrigger render={children} />
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>

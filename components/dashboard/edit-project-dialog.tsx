@@ -39,7 +39,7 @@ interface EditProjectDialogProps {
     description: string | null;
     videoUrl: string;
   };
-  children: React.ReactNode;
+  children: React.ReactElement;
 }
 
 export function EditProjectDialog({ project, children }: EditProjectDialogProps) {
@@ -67,9 +67,7 @@ export function EditProjectDialog({ project, children }: EditProjectDialogProps)
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger render={children} />
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Project</DialogTitle>

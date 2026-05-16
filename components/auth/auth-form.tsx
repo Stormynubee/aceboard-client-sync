@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Github, Mail } from "lucide-react";
+import { User, Mail } from "lucide-react";
 import { signIn } from "next-auth/react";
 
 interface AuthFormProps {
@@ -30,7 +30,7 @@ export function AuthForm({ type }: AuthFormProps) {
           className="w-full gap-2 h-11" 
           onClick={() => signIn("github", { callbackUrl: "/dashboard" })}
         >
-          <Github className="w-5 h-5" />
+          <User className="w-5 h-5" />
           Continue with GitHub
         </Button>
         <Button 

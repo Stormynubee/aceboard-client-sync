@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { signOutAction } from "@/lib/actions";
 
 export async function Navbar() {
   const session = await auth();
@@ -24,10 +25,7 @@ export async function Navbar() {
               <Link href="/dashboard">
                 <Button variant="ghost" size="sm">Dashboard</Button>
               </Link>
-              <form action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}>
+              <form action={signOutAction}>
                 <Button size="sm">Sign Out</Button>
               </form>
             </>
