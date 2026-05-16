@@ -79,3 +79,17 @@ export async function deleteProject(id: string) {
 
   revalidatePath("/dashboard");
 }
+
+export async function addComment(projectId: string, text: string, timestamp: string, author: string) {
+  const comment = await db.comment.create({
+    data: {
+      projectId,
+      text,
+      timestamp,
+      author,
+    },
+  });
+
+  revalidatePath(`/review/${projectId}`);
+  return comment;
+}
